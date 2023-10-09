@@ -15,6 +15,28 @@ set isfname+=: " VMSRIs can contain colons
 set includeexpr=VMSRI2PATH(v:fname)
 
 function VMSRI2PATH(filename)
+    let s:lineNum = line('.')
+    let s:line = getline(s:lineNum)
+    " API vmsri gets a special treatment
+    if matchstr(s:line, 'API::vms_import') != ""
+        let s:argumentsString = substitute("API::vms_import('api.handler.papi.dashared.nc.messages.correspondence::abstract', 1);", "API::vms_import(\\([^)]*\\));*", "\\1", "")
+        let s:arguments = map(split(s:argumentsString, ","), 'trim(v:val)')
+        let s:versionString = remove(s:arguments, -1) || "1"
+        let s:version = str2nr(s:versionString)
+        while s:version > 0
+            let s:vmsri = substitute(a:filename, "api.handler", "api.v" . s:version . ".handler", "")
+            let s:filepath = s:vmsri2path(s:vmsri)
+            " check if filepath exists
+            if filereadable(s:filepath)
+                return s:filepath
+            endif
+            " decrease the version and try again
+            let s:version -= 1
+        endwhile
+    endif
+
+
+    " Handle API vmsri's
     return s:vmsri2path(a:filename)
 endfunction
 
